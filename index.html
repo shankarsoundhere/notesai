@@ -6,6 +6,10 @@
 
 <title>Notes Viewer</title>
 
+<!-- ✅ PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a7f3f">
+
 <style>
 
 body{
@@ -17,8 +21,6 @@ body{
 
 h2{
   color:#0a7f3f;
-  font-size:20px;
-  margin-bottom:10px;
 }
 
 input{
@@ -27,23 +29,19 @@ input{
   font-size:16px;
   border:2px solid #0a7f3f;
   border-radius:8px;
-  box-sizing:border-box;
 }
 
 .card{
-  background:#ffffff;
+  background:#fff;
   border-left:5px solid #0a7f3f;
   padding:12px;
   margin:12px 0;
   border-radius:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 .noteItem{
   font-size:14px;
-  color:#333;
   margin-left:8px;
-  line-height:1.4;
 }
 
 button{
@@ -51,14 +49,9 @@ button{
   color:white;
   border:none;
   padding:10px;
-  margin:5px 5px 5px 0;
+  margin:5px 0;
   border-radius:6px;
-  font-size:14px;
   width:100%;
-}
-
-button:hover{
-  background:#086633;
 }
 
 .btnGroup{
@@ -72,24 +65,14 @@ button:hover{
   color:#00ff88;
   padding:10px;
   border-radius:6px;
-  margin-top:8px;
 
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-
-  font-size:13px;
-  line-height:1.5;
+  white-space:pre-wrap;
+  word-break:break-word;
 }
 
-/* Desktop */
 @media(min-width:600px){
-  .btnGroup{
-    flex-direction:row;
-  }
-  button{
-    width:auto;
-  }
+  .btnGroup{flex-direction:row;}
+  button{width:auto;}
 }
 
 </style>
@@ -123,13 +106,12 @@ const $ = id=>document.getElementById(id);
 
 let dataArr=[];
 
-/* 🔴 LIVE DATA */
+/* 🔴 DATA */
 onSnapshot(collection(db,"notes"),snap=>{
   dataArr=[];
   snap.forEach(d=>{
     dataArr.push({id:d.id,...d.data()});
   });
-
   render(dataArr);
 });
 
@@ -162,14 +144,14 @@ ${(x.notes || []).map(n=>`<div class="noteItem">• ${n}</div>`).join("")}
 $("list").innerHTML=html;
 }
 
-/* 👁 SHOW CODE */
-window.toggleCode=(id)=>{
+/* 👁 */
+window.toggleCode=id=>{
 let el=document.getElementById("code-"+id);
-el.style.display = el.style.display==="block" ? "none" : "block";
+el.style.display = el.style.display==="block" ? "none":"block";
 };
 
-/* 📋 COPY */
-window.copyCode=(code)=>{
+/* 📋 */
+window.copyCode=code=>{
 navigator.clipboard.writeText(code);
 alert("Copied!");
 };
@@ -182,15 +164,19 @@ render(dataArr.filter(x=>(x.topic||"").toLowerCase().includes(val)));
 
 /* 🚀 DOUBLE CLICK REDIRECT */
 $("search").addEventListener("dblclick",()=>{
-  window.location.href="write.html"; // 👉 यहां अपना दूसरा page डालो
+  window.location.href="page2.html";
 });
 
-/* 🛡 SAFE HTML */
+/* 🛡 */
 function escapeHTML(str){
-return str.replace(/[&<>"']/g,tag=>{
-const chars={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
-return chars[tag]||tag;
+return str.replace(/[&<>"']/g,t=>{
+return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[t];
 });
+}
+
+/* 🔥 SERVICE WORKER */
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
 }
 
 </script>
