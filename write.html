@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Notes</title>
+
+<style>
+body{
+font-family:Arial;
+background:#f6fff8;
+margin:0;
+}
+
+/* SEARCH BAR */
+.searchBar{
+background:#28a745;
+padding:12px;
+position:sticky;
+top:0;
+z-index:10;
+}
+.searchBar input{
+width:100%;
+padding:10px;
+border:none;
+border-radius:6px;
+}
+
+/* MAIN */
+.box{
+max-width:1000px;
+margin:auto;
+padding:12px;
+}
+
+@media (max-width:600px){
+.box{padding:10px;}
+h2{font-size:20px;}
+}
+
+/* INPUT */
+input{
+width:100%;
+padding:10px;
+margin:6px 0;
+border-radius:6px;
+border:1px solid #ccc;
+font-size:16px;
+}
+
+/* BUTTON */
+button{
+width:100%;
+padding:12px;
+margin:6px 0;
+background:#28a745;
+color:white;
+border:none;
+border-radius:6px;
+font-size:15px;
+cursor:pointer;
+}
+button:hover{
+background:#218838;
+}
+
+/* CARD */
+.card{
+background:#fff;
+padding:12px;
+border-radius:10px;
+margin-top:12px;
+word-wrap:break-word;
+}
+
+/* NOTES */
+.noteItem{
+background:#e9f7ef;
+padding:6px;
+border-radius:6px;
+margin:4px 0;
+word-wrap:break-word;
+}
+
+/* ACTION */
+.action{
+display:flex;
+gap:5px;
+}
+.action button{
+font-size:12px;
+padding:8px;
+}
+
+/* CODE BOX */
+.codeBox{
+background:#000;
+color:#00ff88;
+padding:10px;
+border-radius:8px;
+display:none;
+white-space:pre-wrap;
+word-break:break-word;
+overflow-wrap:break-word;
+font-size:13px;
+line-height:1.5;
+}
+
+/* CODE BUTTONS */
+.codeActions{
+display:flex;
+gap:5px;
+}
+.codeActions button{
+flex:1;
+font-size:12px;
+padding:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="searchBar">
+<input id="search" placeholder="🔍 Search Topic">
+</div>
+
+<div class="box">
+
+<h2 style="color:#28a745;">Pro Notes</h2>
+
+<input id="topic" placeholder="Topic Name">
+
+<div id="notesWrap">
+<input class="note" placeholder="Double Tap to add more">
+</div>
+
+<input id="code" placeholder="Code">
+
+<button onclick="saveData()">💾 Save</button>
+
+<div id="list"></div>
+
+</div>
+
+<!-- 🔥 FIREBASE -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCEwS76zKIM5fW7SrsUygNoZCRCDS5gH-Q",
+  authDomain: "ai-html-63caa.firebaseapp.com",
+  projectId: "ai-html-63caa",
+  storageBucket: "ai-html-63caa.firebasestorage.app",
+  messagingSenderId: "382279036183",
+  appId: "1:382279036183:web:9c9a46129ba1cbd32f1b52"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const $ = id=>document.getElementById(id);
+
+let dataArr=[];
+let editId=null;
+
+/* DOUBLE TAP ADD NOTE */
+let lastTap=0;
+document.addEventListener("touchend",(e)=>{
+if(!e.target.classList.contains("note")) return;
+let now=Date.now();
+if(now-lastTap<300){
+let i=document.createElement("input");
+i.className="note";
+i.placeholder="Note Point";
+$("notesWrap").appendChild(i);
+i.focus();
+}
+lastTap=now;
+});
+
+/* SAVE */
+window.saveData=async()=>{
+
+let notes=[];
+document.querySelectorAll(".note").forEach(n=>{
+if(n.value.trim()) notes.push(n.value.trim());
+});
+
+let obj={
+topic:$("topic").value.trim(),
+notes:notes,
+code:$("code").value.trim()
+};
+
+if(!obj.topic) return alert("Topic डालो");
+
+if(editId){
+await updateDoc(doc(db,"notes",editId),obj);
+}else{
+await addDoc(collection(db,"notes"),obj);
+}
+
+resetForm();
+};
+
+/* RESET */
+function resetForm(){
+editId=null;
+$("topic").value="";
+$("code").value="";
+$("notesWrap").innerHTML=`<input class="note" placeholder="Double Tap to add more">`;
+}
+
+/* LIVE LOAD */
+onSnapshot(collection(db,"notes"),snap=>{
+dataArr=[];
+snap.forEach(d=>dataArr.push({id:d.id,...d.data()}));
+render(dataArr);
+});
+
+/* RENDER */
+function render(arr){
+
+let html="";
+
+arr.forEach(x=>{
+html+=`
+<div class="card">
+
+<b>${x.topic}</b>
+
+${x.notes.map(n=>`<div class="noteItem">• ${n}</div>`).join("")}
+
+<div class="codeActions">
+<button onclick="toggleCode('${x.id}')">👁 Show</button>
+<button onclick="copyCode(\`${escapeHTML(x.code)}\`)">📋 Copy</button>
+</div>
+
+<pre id="code-${x.id}" class="codeBox">${escapeHTML(x.code)}</pre>
+
+<div class="action">
+<button onclick="edit('${x.id}')">✏️ Edit</button>
+<button onclick="del('${x.id}')">🗑️ Delete</button>
+</div>
+
+</div>
+`;
+});
+
+$("list").innerHTML=html;
+}
+
+/* SHOW CODE */
+window.toggleCode=(id)=>{
+let el=document.getElementById("code-"+id);
+el.style.display = el.style.display==="block" ? "none" : "block";
+};
+
+/* COPY */
+window.copyCode=(code)=>{
+navigator.clipboard.writeText(code);
+alert("Copied!");
+};
+
+/* EDIT */
+window.edit=(id)=>{
+let x=dataArr.find(i=>i.id==id);
+editId=id;
+
+$("topic").value=x.topic;
+$("code").value=x.code;
+
+$("notesWrap").innerHTML="";
+x.notes.forEach(n=>{
+let i=document.createElement("input");
+i.className="note";
+i.value=n;
+$("notesWrap").appendChild(i);
+});
+};
+
+/* DELETE */
+window.del=async(id)=>{
+if(!confirm("Delete?")) return;
+await deleteDoc(doc(db,"notes",id));
+};
+
+/* SEARCH */
+$("search").addEventListener("input",()=>{
+let val=$("search").value.toLowerCase();
+render(dataArr.filter(x=>x.topic.toLowerCase().includes(val)));
+});
+
+/* ESCAPE */
+function escapeHTML(str){
+return str.replace(/[&<>"']/g,tag=>{
+const chars={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+return chars[tag]||tag;
+});
+}
+
+</script>
+
+</body>
+</html>

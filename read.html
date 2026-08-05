@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Notes Viewer</title>
+
+<style>
+body{
+  font-family:sans-serif;
+  padding:15px;
+  background:#f0fff4;
+}
+
+h2{
+  color:#0a7f3f;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin:10px 0;
+  border:2px solid #0a7f3f;
+  border-radius:6px;
+}
+
+.card{
+  background:#ffffff;
+  border-left:6px solid #0a7f3f;
+  padding:12px;
+  margin:12px 0;
+  border-radius:8px;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+.noteItem{
+  font-size:14px;
+  color:#333;
+  margin-left:10px;
+}
+
+button{
+  background:#0a7f3f;
+  color:white;
+  border:none;
+  padding:6px 10px;
+  margin:5px 5px 5px 0;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#086633;
+}
+
+/* 🔥 FIXED CODE BOX */
+.codeBox{
+  display:none;
+  background:#001a0d;
+  color:#00ff88;
+  padding:10px;
+  border-radius:6px;
+  margin-top:5px;
+
+  white-space: pre-wrap;     /* line wrap */
+  word-break: break-word;    /* break long text */
+  overflow-wrap: anywhere;   /* extra safety */
+
+  line-height:1.5;
+  font-size:13px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>🌿 Notes Viewer</h2>
+
+<input id="search" placeholder="Search topic...">
+
+<div id="list"></div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, onSnapshot, deleteDoc, doc } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCEwS76zKIM5fW7SrsUygNoZCRCDS5gH-Q",
+  authDomain: "ai-html-63caa.firebaseapp.com",
+  projectId: "ai-html-63caa"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const $ = id=>document.getElementById(id);
+
+let dataArr=[];
+
+/* LIVE DATA */
+onSnapshot(collection(db,"notes"),snap=>{
+  dataArr=[];
+  snap.forEach(d=>{
+    dataArr.push({id:d.id,...d.data()});
+  });
+
+  dataArr.sort((a,b)=>(a.serial||0)-(b.serial||0));
+  render(dataArr);
+});
+
+/* RENDER */
+function render(arr){
+
+let html="";
+
+arr.forEach(x=>{
+
+html+=`
+<div class="card">
+
+<b>${x.serial || 0}. ${x.topic || ""}</b>
+
+${(x.notes || []).map(n=>`<div class="noteItem">• ${n}</div>`).join("")}
+
+<div>
+<button onclick="toggleCode('${x.id}')">👁 Show Code</button>
+<button onclick="copyCode(\`${escapeHTML(x.code || "")}\`)">📋 Copy</button>
+<button onclick="del('${x.id}')">🗑️ Delete</button>
+</div>
+
+<pre id="code-${x.id}" class="codeBox">${escapeHTML(x.code || "")}</pre>
+
+</div>
+`;
+
+});
+
+$("list").innerHTML=html;
+}
+
+/* FUNCTIONS */
+window.toggleCode=(id)=>{
+let el=document.getElementById("code-"+id);
+el.style.display = el.style.display==="block" ? "none" : "block";
+};
+
+window.copyCode=(code)=>{
+navigator.clipboard.writeText(code);
+alert("Copied!");
+};
+
+window.del=async(id)=>{
+if(!confirm("Delete?")) return;
+await deleteDoc(doc(db,"notes",id));
+};
+
+/* SEARCH */
+$("search").addEventListener("input",()=>{
+let val=$("search").value.toLowerCase();
+render(dataArr.filter(x=>(x.topic||"").toLowerCase().includes(val)));
+});
+
+/* SAFE HTML */
+function escapeHTML(str){
+return str.replace(/[&<>"']/g,tag=>{
+const chars={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+return chars[tag]||tag;
+});
+}
+
+</script>
+
+</body>
+</html>
